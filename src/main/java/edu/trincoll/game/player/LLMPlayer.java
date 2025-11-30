@@ -39,45 +39,37 @@ public class LLMPlayer implements Player {
                                    List<Character> allies,
                                    List<Character> enemies,
                                    GameState gameState) {
-        // TODO 1: Build the prompt (10 points)
-        // Create a detailed prompt that gives the LLM:
-        // - Character information (name, type, HP, mana, stats)
-        // - Allies status
-        // - Enemies status
-        // - Available actions
-        // - Strategic context
-        //
-        // Hint: Use String templates or StringBuilder
-        // Good prompts should be clear, structured, and include examples
         String prompt = buildPrompt(self, allies, enemies, gameState);
 
-        // TODO 2: Call the LLM and parse response (15 points)
-        // Use the ChatClient to get a Decision object from the LLM
-        // Spring AI will automatically deserialize the JSON response into the Decision record
-        //
-        // Example:
-        //   Decision decision = chatClient.prompt()
-        //       .user(prompt)
-        //       .call()
-        //       .entity(Decision.class);
-        //
-        // Handle errors gracefully (fallback to default action if parsing fails)
-        //
-        // Expected JSON format from LLM:
-        // {
-        //   "action": "attack" | "heal",
-        //   "target": "character_name",
-        //   "reasoning": "why this decision was made"
-        // }
-        throw new UnsupportedOperationException("TODO 2: Implement LLM call and parse response");
+        try {
+            Decision decision = chatClient.prompt()
+                .user(prompt)
+                .call()
+                .entity(Decision.class);
 
-        // TODO 3: Convert Decision to GameCommand (10 points)
-        // Based on the decision.action(), create the appropriate GameCommand:
-        // - "attack" -> new AttackCommand(self, target)
-        // - "heal" -> new HealCommand(self, target)
-        //
-        // Use findCharacterByName() to locate the target character
-        // Hint: Use a switch expression or if-else to handle different actions
+            if (decision == null || decision.action() == null || decision.target() == null) {
+                System.err.println("Invalid decision from LLM: " + decision);
+                return new AttackCommand(self, enemies.getFirst()); // Fallback
+            }
+
+            System.out.println("[" + modelName + "] Reasoning: " + decision.reasoning());
+
+            Character target;
+            if ("attack".equalsIgnoreCase(decision.action())) {
+                target = findCharacterByName(decision.target(), enemies);
+                return new AttackCommand(self, target);
+            } else if ("heal".equalsIgnoreCase(decision.action())) {
+                target = findCharacterByName(decision.target(), allies);
+                return new HealCommand(target, 30);
+            } else {
+                System.err.println("Unknown action from LLM: " + decision.action());
+                return new AttackCommand(self, enemies.getFirst()); // Fallback
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error calling LLM: " + e.getMessage());
+            return new AttackCommand(self, enemies.getFirst()); // Fallback
+        }
     }
 
     /**
@@ -132,12 +124,49 @@ public class LLMPlayer implements Player {
      * @return prompt string for the LLM
      */
     private String buildPrompt(Character self,
-                              List<Character> allies,
-                              List<Character> enemies,
-                              GameState gameState) {
-        // TODO 1: Implement prompt building
-        // See method documentation above for structure
-        throw new UnsupportedOperationException("TODO 1: Build prompt for LLM");
+                               List<Character> allies,
+                               List<Character> enemies,
+                               GameState gameState) {
+        return """
+            You are %s, a %s in a tactical RPG combat.
+            
+            YOUR STATUS:
+            - HP: %d/%d (%.0f%%)
+            - Mana: %d/%d
+            - Attack Power: %d, Defense: %d
+            
+            YOUR TEAM (allies):
+            %s
+            
+            ENEMIES:
+            %s
+            
+            AVAILABLE ACTIONS:
+            1. attack <enemy_name> - Estimated damage: ~%d
+            2. heal <ally_name> - Restores 30 HP
+            
+            TACTICAL GUIDANCE:
+            - Focus fire: Attack wounded enemies to eliminate threats
+            - Protect allies: Heal teammates below 30%% HP
+            - Consider your role: %s
+            
+            Respond ONLY with JSON:
+            {
+              "action": "attack" | "heal",
+              "target": "character_name",
+              "reasoning": "brief tactical explanation"
+            }
+            """.formatted(
+                self.getName(), self.getType(),
+                self.getStats().health(), self.getStats().maxHealth(),
+                (double) self.getStats().health() / self.getStats().maxHealth() * 100,
+                self.getStats().mana(), self.getStats().maxMana(),
+                self.getStats().attackPower(), self.getStats().defense(),
+                formatCharacterList(allies),
+                formatCharacterList(enemies),
+                estimateDamage(self, enemies.getFirst()), // Estimate damage against the first enemy as a baseline
+                "Make strategic decisions based on the current battle state."
+            );
     }
 
     /**
