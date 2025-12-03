@@ -117,22 +117,22 @@ public class GameApplication {
         ChatClient openAiClient,
         ChatClient anthropicClient) {
     
-    // Team 1: Human + RuleBasedAI
-    Character humanWarrior = CharacterFactory.createWarrior("Conan");
-    Character aiMage = CharacterFactory.createMage("Gandalf");
-    List<Character> team1 = List.of(humanWarrior, aiMage);
+    // Team 1: Weaker characters (Archer + Rogue) - easier to defeat
+    Character archer1 = CharacterFactory.createArcher("Legolas");
+    Character rogue1 = CharacterFactory.createRogue("Shadow");
+    List<Character> team1 = List.of(archer1, rogue1);
     
-    // Team 2: Two LLM players (GPT-5 and Claude)
-    Character gptArcher = CharacterFactory.createArcher("Legolas");
-    Character claudeRogue = CharacterFactory.createRogue("Shadow");
-    List<Character> team2 = List.of(gptArcher, claudeRogue);
+    // Team 2: Stronger characters (Warrior + Mage) - should win
+    Character warrior2 = CharacterFactory.createWarrior("Conan");
+    Character mage2 = CharacterFactory.createMage("Gandalf");
+    List<Character> team2 = List.of(warrior2, mage2);
     
     // Map each character to their player type
     Map<Character, Player> playerMap = new HashMap<>();
-    playerMap.put(humanWarrior, new HumanPlayer());
-    playerMap.put(aiMage, new RuleBasedPlayer());
-    playerMap.put(gptArcher, new LLMPlayer(openAiClient, "GPT-5"));
-    playerMap.put(claudeRogue, new LLMPlayer(anthropicClient, "Claude-Sonnet-4.5"));
+    playerMap.put(archer1, new HumanPlayer());  // Human controls archer
+    playerMap.put(rogue1, new RuleBasedPlayer());  // RuleBasedAI controls rogue
+    playerMap.put(warrior2, new LLMPlayer(openAiClient, "GPT-5"));  // GPT-5 controls warrior
+    playerMap.put(mage2, new LLMPlayer(anthropicClient, "Claude-Sonnet-4.5"));  // Claude controls mage
     
     // Create and return GameController
     return new GameController(team1, team2, playerMap);
