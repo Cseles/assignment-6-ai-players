@@ -39,14 +39,17 @@ public class LLMPlayer implements Player {
                                    List<Character> allies,
                                    List<Character> enemies,
                                    GameState gameState) {
+        // TODO 1: Build the prompt
         String prompt = buildPrompt(self, allies, enemies, gameState);
 
         try {
+            // TODO 2: Call the LLM and parse response
             Decision decision = chatClient.prompt()
                 .user(prompt)
                 .call()
                 .entity(Decision.class);
 
+            // TODO 3: Validate and convert Decision to GameCommand
             if (decision == null || decision.action() == null || decision.target() == null) {
                 System.err.println("Invalid decision from LLM: " + decision);
                 return new AttackCommand(self, enemies.getFirst()); // Fallback
@@ -73,8 +76,8 @@ public class LLMPlayer implements Player {
     }
 
     /**
-     * TODO 1: Implement this method to build an effective prompt.
-     *
+     * TODO 1: Build an effective prompt for the LLM.
+     * 
      * A good prompt should include:
      * 1. Role definition: "You are a [character type] in a tactical RPG..."
      * 2. Current situation: HP, mana, position in battle
@@ -83,39 +86,6 @@ public class LLMPlayer implements Player {
      * 5. Available actions: attack (with damage estimate) or heal
      * 6. Strategic guidance: "Consider focus fire, protect wounded allies..."
      * 7. Output format: JSON structure expected
-     *
-     * Example structure:
-     * """
-     * You are {character_name}, a {type} warrior in a turn-based RPG battle.
-     *
-     * YOUR STATUS:
-     * - HP: {current}/{max} ({percent}%)
-     * - Mana: {current}/{max}
-     * - Attack Power: {attack}
-     * - Defense: {defense}
-     *
-     * YOUR TEAM:
-     * {list allies with HP and status}
-     *
-     * ENEMIES:
-     * {list enemies with HP and status}
-     *
-     * AVAILABLE ACTIONS:
-     * 1. attack <target_name> - Deal ~{estimate} damage
-     * 2. heal <target_name> - Restore 30 HP
-     *
-     * STRATEGY TIPS:
-     * - Focus fire on weak enemies to reduce enemy actions
-     * - Heal allies below 30% HP to prevent deaths
-     * - Consider your character type's strengths
-     *
-     * Respond with JSON:
-     * {
-     *   "action": "attack" or "heal",
-     *   "target": "character name",
-     *   "reasoning": "brief explanation"
-     * }
-     * """
      *
      * @param self your character
      * @param allies your team
@@ -127,6 +97,21 @@ public class LLMPlayer implements Player {
                                List<Character> allies,
                                List<Character> enemies,
                                GameState gameState) {
+        // Get health percentage for self
+        double selfHealthPercent = (double) self.getStats().health() / self.getStats().maxHealth() * 100;
+        
+        // Calculate estimated damage against first enemy as baseline
+        int estimatedDamage = enemies.isEmpty() ? 0 : estimateDamage(self, enemies.getFirst());
+        
+        // Build type-specific tactical advice
+        String roleAdvice = switch (self.getType()) {
+            case WARRIOR -> "As a Warrior, you have high HP and attack power. Focus on protecting allies and eliminating threats.";
+            case MAGE -> "As a Mage, you have powerful attacks but low HP. Stay alive and deal maximum damage.";
+            case ARCHER -> "As an Archer, focus on picking off weakened enemies from a distance.";
+            case ROGUE -> "As a Rogue, use your agility to strike at the most vulnerable targets.";
+            default -> "Make strategic decisions based on the current battle state.";
+        };
+        
         return """
             You are %s, a %s in a tactical RPG combat.
             
@@ -134,6 +119,7 @@ public class LLMPlayer implements Player {
             - HP: %d/%d (%.0f%%)
             - Mana: %d/%d
             - Attack Power: %d, Defense: %d
+            - Strategies: %s (attack), %s (defense)
             
             YOUR TEAM (allies):
             %s
@@ -149,23 +135,31 @@ public class LLMPlayer implements Player {
             - Focus fire: Attack wounded enemies to eliminate threats
             - Protect allies: Heal teammates below 30%% HP
             - Consider your role: %s
+            - Prioritize finishing off low-HP enemies to reduce incoming damage
+            - Save critically wounded allies (below 30%% HP) before they fall
             
-            Respond ONLY with JSON:
+            Respond ONLY with JSON (no markdown, no extra text):
             {
               "action": "attack" | "heal",
               "target": "character_name",
               "reasoning": "brief tactical explanation"
             }
             """.formatted(
-                self.getName(), self.getType(),
-                self.getStats().health(), self.getStats().maxHealth(),
-                (double) self.getStats().health() / self.getStats().maxHealth() * 100,
-                self.getStats().mana(), self.getStats().maxMana(),
-                self.getStats().attackPower(), self.getStats().defense(),
+                self.getName(), 
+                self.getType(),
+                self.getStats().health(), 
+                self.getStats().maxHealth(),
+                selfHealthPercent,
+                self.getStats().mana(), 
+                self.getStats().maxMana(),
+                self.getStats().attackPower(), 
+                self.getStats().defense(),
+                self.getAttackStrategy().getClass().getSimpleName(),
+                self.getDefenseStrategy().getClass().getSimpleName(),
                 formatCharacterList(allies),
                 formatCharacterList(enemies),
-                estimateDamage(self, enemies.getFirst()), // Estimate damage against the first enemy as a baseline
-                "Make strategic decisions based on the current battle state."
+                estimatedDamage,
+                roleAdvice
             );
     }
 

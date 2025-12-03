@@ -47,44 +47,62 @@ public class GameController {
      * Runs the main game loop until one team is defeated.
      * <p>
      * TODO 4: Implement game loop (15 points)
-     * <p>
-     * The game loop should:
-     * <p>
-     * 1. Check win condition (isGameOver())
-     * 2. Process each character's turn in team1
-     * 3. Check win condition again
-     * 4. Process each character's turn in team2
-     * 5. Update game state for next round
-     * 6. Display round summary
-     * <p>
-     * For each turn:
-     * <p>
-     * - Get the Player for the character
-     * - Call player.decideAction(character, allies, enemies, gameState)
-     * - Execute the command using invoker
-     * - Update game state
-     * - Display action result
-     * <p>
-     * Hint: Use processTurn() helper method for each character
      */
     public void playGame() {
-        throw new UnsupportedOperationException("TODO 4: Implement game loop");
+        System.out.println("=".repeat(60));
+        System.out.println("AI-POWERED RPG GAME");
+        System.out.println("=".repeat(60));
+        
+        displayTeamSetup();
+        
+        // Main game loop - continues until one team is defeated
+        while (!isGameOver()) {
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("TURN " + gameState.turnNumber() + " - ROUND " + gameState.roundNumber());
+            System.out.println("=".repeat(60));
+            
+            // Team 1's turn - process each living character
+            for (Character character : team1) {
+                if (character.getStats().health() > 0) {
+                    processTurn(character, team1, team2);
+                    
+                    // Check if game ended after this action
+                    if (isGameOver()) {
+                        break;
+                    }
+                }
+            }
+            
+            // Check again before Team 2's turn
+            if (isGameOver()) {
+                break;
+            }
+            
+            // Team 2's turn - process each living character
+            for (Character character : team2) {
+                if (character.getStats().health() > 0) {
+                    processTurn(character, team2, team1);
+                    
+                    // Check if game ended after this action
+                    if (isGameOver()) {
+                        break;
+                    }
+                }
+            }
+            
+            // Move to next round
+            gameState = gameState.nextRound();
+            
+            // Display round summary
+            displayRoundSummary();
+        }
     }
 
     /**
      * Processes a single character's turn.
      * <p>
      * TODO 5: Implement turn processing (10 points)
-     * <p>
-     * Steps:
-     * <p>
-     * 1. Get the player controlling this character
-     * 2. Determine allies and enemies lists
-     * 3. Call player.decideAction() to get a command
-     * 4. Execute the command via invoker
-     * 5. Display what happened
-     * 6. Update game state
-     * <p>
+     * 
      * @param character the character taking their turn
      * @param allies the character's team
      * @param enemies the opposing team
@@ -96,9 +114,34 @@ public class GameController {
         if (character.getStats().health() <= 0) {
             return;
         }
-
-        // TODO 5: Get player and execute their decision
-        throw new UnsupportedOperationException("TODO 5: Process character turn");
+        
+        System.out.println("\n" + character.getName() + "'s turn...");
+        
+        // Get the player controlling this character
+        Player player = playerMap.get(character);
+        
+        if (player == null) {
+            System.err.println("Error: No player found for " + character.getName());
+            return;
+        }
+        
+        // Get the player's decision
+        GameCommand command = player.decideAction(character, allies, enemies, gameState);
+        
+        if (command == null) {
+            System.err.println("Error: Player returned null command");
+            return;
+        }
+        
+        // Execute the command
+        invoker.executeCommand(command);
+        
+        // Display action result (commands typically print their own results)
+        displayActionResult(command, character);
+        
+        // Update game state - increment turn and track command
+        gameState = gameState.nextTurn()
+            .withUndo(true, invoker.getCommandHistory().size());
     }
 
     /**
@@ -155,5 +198,59 @@ public class GameController {
             c.getType(),
             Math.max(0, c.getStats().health()),
             status);
+    }
+    
+    /**
+     * Displays initial team setup.
+     */
+    private void displayTeamSetup() {
+        System.out.println("\n=== Team Setup ===");
+        
+        System.out.println("Team 1:");
+        for (Character c : team1) {
+            Player player = playerMap.get(c);
+            String playerType = player.getClass().getSimpleName();
+            System.out.printf("  - %s (%s) - %s%n", 
+                c.getName(), c.getType(), playerType);
+        }
+        
+        System.out.println("\nTeam 2:");
+        for (Character c : team2) {
+            Player player = playerMap.get(c);
+            String playerType = player.getClass().getSimpleName();
+            System.out.printf("  - %s (%s) - %s%n", 
+                c.getName(), c.getType(), playerType);
+        }
+    }
+    
+    /**
+     * Displays summary at end of each round.
+     */
+    private void displayRoundSummary() {
+        System.out.println("\n--- End of Round " + gameState.roundNumber() + " ---");
+        
+        System.out.println("\nTeam 1 Status:");
+        for (Character c : team1) {
+            String status = c.getStats().health() > 0 
+                ? String.format("%d/%d HP", c.getStats().health(), c.getStats().maxHealth())
+                : "DEFEATED";
+            System.out.printf("  %s: %s%n", c.getName(), status);
+        }
+        
+        System.out.println("\nTeam 2 Status:");
+        for (Character c : team2) {
+            String status = c.getStats().health() > 0 
+                ? String.format("%d/%d HP", c.getStats().health(), c.getStats().maxHealth())
+                : "DEFEATED";
+            System.out.printf("  %s: %s%n", c.getName(), status);
+        }
+    }
+    
+    /**
+     * Displays the result of an action.
+     */
+    private void displayActionResult(GameCommand command, Character actor) {
+        // Commands typically print their own results
+        // This method is here for additional logging if needed
     }
 }
