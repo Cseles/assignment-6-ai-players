@@ -129,10 +129,11 @@ public class GameApplication {
     Character aiMage = CharacterFactory.createMage("Gandalf");
     List<Character> team1 = List.of(humanWarrior, aiMage);
     
-    // Team 2: Two LLM players (GPT-5 and Claude)
+    // Team 2: Three LLM players (GPT-5 and Claude, and Gemini)
     Character gptArcher = CharacterFactory.createArcher("Legolas");
     Character claudeRogue = CharacterFactory.createRogue("Shadow");
-    List<Character> team2 = List.of(gptArcher, claudeRogue);
+    Character geminiWarrior = CharacterFactory.createWarrior("Tank");
+    List<Character> team2 = List.of(gptArcher, claudeRogue, geminiWarrior);
     
     // Map each character to their player type
     Map<Character, Player> playerMap = new HashMap<>();
@@ -140,23 +141,8 @@ public class GameApplication {
     playerMap.put(aiMage, new RuleBasedPlayer());
     playerMap.put(gptArcher, new LLMPlayer(openAiClient, "GPT-5"));
     playerMap.put(claudeRogue, new LLMPlayer(anthropicClient, "Claude-Sonnet-4.5"));
+    playerMap.put(geminiWarrior, new LLMPlayer(geminiClient, "Gemini-2.5-Pro"));
     
-    // Create and return GameController
-    return new GameController(team1, team2, playerMap);
-}
-
-    /**
-     * Interactive team setup (optional enhancement).
-     *
-     * This could allow users to choose their team composition
-     * via console prompts. Not required for base assignment.
-     */
-    private GameController interactiveSetup(
-            ChatClient openAiClient,
-            ChatClient anthropicClient,
-            ChatClient geminiClient) {
-        Scanner scanner = new Scanner(System.in);
-
         System.out.println("\n=== Team Setup ===");
         System.out.println("Configure your team!");
 
