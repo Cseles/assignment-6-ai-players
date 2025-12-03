@@ -50,27 +50,25 @@ public class GameApplication {
      *
      * @param openAiClient ChatClient for OpenAI/GPT-5
      * @param anthropicClient ChatClient for Anthropic/Claude Sonnet 4.5
-     * @param geminiClient ChatClient for Google/Gemini 2.5 Pro
      * @return CommandLineRunner that starts the game
      */
     @Bean
     public CommandLineRunner run(
             @Qualifier("openAiChatClient") ChatClient openAiClient,
-            @Qualifier("anthropicChatClient") ChatClient anthropicClient,
-            @Qualifier("geminiChatClient") ChatClient geminiClient) {
+            @Qualifier("anthropicChatClient") ChatClient anthropicClient) {
 
         return args -> {
             System.out.println("""
                 ============================================================
                 AI-POWERED RPG GAME
                 ============================================================
-
+                
                 This game demonstrates design patterns with AI players:
                 - Strategy Pattern: Different AI decision-making algorithms
                 - Command Pattern: Undoable game actions
                 - Factory Pattern: Character creation
                 - Builder Pattern: Complex object construction
-
+                
                 Players can be:
                 - Human (you control via console)
                 - LLM-based (GPT-4, Claude, or Gemini)
@@ -78,11 +76,7 @@ public class GameApplication {
                 ============================================================
                 """);
 
-                GameController controller = createTeamConfiguration(
-                    openAiClient, 
-                    anthropicClient, 
-                    geminiClient
-                );
+                GameController controller = createTeamConfiguration(openAiClient, anthropicClient);
                 
                 // Start the game
                 controller.playGame();
@@ -121,19 +115,17 @@ public class GameApplication {
      */
     private GameController createTeamConfiguration(
         ChatClient openAiClient,
-        ChatClient anthropicClient,
-        ChatClient geminiClient) {
+        ChatClient anthropicClient) {
     
     // Team 1: Human + RuleBasedAI
     Character humanWarrior = CharacterFactory.createWarrior("Conan");
     Character aiMage = CharacterFactory.createMage("Gandalf");
     List<Character> team1 = List.of(humanWarrior, aiMage);
     
-    // Team 2: Three LLM players (GPT-5 and Claude, and Gemini)
+    // Team 2: Two LLM players (GPT-5 and Claude)
     Character gptArcher = CharacterFactory.createArcher("Legolas");
     Character claudeRogue = CharacterFactory.createRogue("Shadow");
-    Character geminiWarrior = CharacterFactory.createWarrior("Tank");
-    List<Character> team2 = List.of(gptArcher, claudeRogue, geminiWarrior);
+    List<Character> team2 = List.of(gptArcher, claudeRogue);
     
     // Map each character to their player type
     Map<Character, Player> playerMap = new HashMap<>();
@@ -141,14 +133,8 @@ public class GameApplication {
     playerMap.put(aiMage, new RuleBasedPlayer());
     playerMap.put(gptArcher, new LLMPlayer(openAiClient, "GPT-5"));
     playerMap.put(claudeRogue, new LLMPlayer(anthropicClient, "Claude-Sonnet-4.5"));
-    playerMap.put(geminiWarrior, new LLMPlayer(geminiClient, "Gemini-2.5-Pro"));
     
-        System.out.println("\n=== Team Setup ===");
-        System.out.println("Configure your team!");
-
-        // Let user choose characters and AI models
-        // This is an optional feature for students to implement
-
-        throw new UnsupportedOperationException("Optional: Interactive setup not implemented");
-    }
+    // Create and return GameController
+    return new GameController(team1, team2, playerMap);
+}
 }

@@ -49,6 +49,7 @@ public class GameController {
      * TODO 4: Implement game loop (15 points)
      */
     public void playGame() {
+<<<<<<< HEAD
         System.out.println("=".repeat(60));
         System.out.println("AI-POWERED RPG GAME");
         System.out.println("=".repeat(60));
@@ -96,6 +97,63 @@ public class GameController {
             // Display round summary
             displayRoundSummary();
         }
+=======
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("GAME START!");
+        System.out.println("=".repeat(60));
+        
+        // Display team setup
+        System.out.println("\n=== Team Setup ===");
+        System.out.println("\nTeam 1:");
+        for (Character c : team1) {
+            Player p = playerMap.get(c);
+            String playerType = p.getClass().getSimpleName();
+            System.out.printf("  - %s (%s) - %s%n", c.getName(), c.getType(), playerType);
+        }
+        System.out.println("\nTeam 2:");
+        for (Character c : team2) {
+            Player p = playerMap.get(c);
+            String playerType = p.getClass().getSimpleName();
+            System.out.printf("  - %s (%s) - %s%n", c.getName(), c.getType(), playerType);
+        }
+        
+        // Main game loop
+        while (!isGameOver()) {
+            // Display round info
+            System.out.println("\n" + "=".repeat(60));
+            System.out.printf("TURN %d - ROUND %d%n", gameState.turnNumber(), gameState.roundNumber());
+            System.out.println("=".repeat(60));
+            
+            // Team 1's turn
+            for (Character character : team1) {
+                if (isGameOver()) break;  // Check if game ended
+                if (character.getStats().health() > 0) {  // Skip defeated characters
+                    processTurn(character, team1, team2);
+                }
+            }
+            
+            if (isGameOver()) break;  // Check again after Team 1
+            
+            // Team 2's turn
+            for (Character character : team2) {
+                if (isGameOver()) break;  // Check if game ended
+                if (character.getStats().health() > 0) {  // Skip defeated characters
+                    processTurn(character, team2, team1);
+                }
+            }
+            
+            // Advance to next round
+            gameState = gameState.nextRound();
+            
+            // Display round summary if game continues
+            if (!isGameOver()) {
+                System.out.println("\n--- Round " + gameState.roundNumber() + " Complete ---");
+            }
+        }
+        
+        // Game is over, display final result
+        displayResult();
+>>>>>>> 0225f16 (App runs perfectly)
     }
 
     /**
@@ -108,6 +166,7 @@ public class GameController {
      * @param enemies the opposing team
      */
     private void processTurn(Character character,
+<<<<<<< HEAD
                             List<Character> allies,
                             List<Character> enemies) {
         // Skip if character is defeated
@@ -142,7 +201,31 @@ public class GameController {
         // Update game state - increment turn and track command
         gameState = gameState.nextTurn()
             .withUndo(true, invoker.getCommandHistory().size());
+=======
+        List<Character> allies,
+        List<Character> enemies) {
+// Step 1: Skip if defeated (already implemented)
+    if (character.getStats().health() <= 0) {
+        return;
+>>>>>>> 0225f16 (App runs perfectly)
     }
+
+
+// Step 2: Get the Player controlling this character
+Player player = playerMap.get(character);
+
+// Step 3: Ask player to decide what action to take
+GameCommand command = player.decideAction(character, allies, enemies, gameState);
+
+// Step 4: Execute the command via CommandInvoker
+invoker.executeCommand(command);
+
+// Step 5: Display what happened (optional - may need helper method)
+
+// Step 6: Update game state
+gameState = gameState.nextTurn()
+.withUndo(true, invoker.getCommandHistory().size());
+}
 
     /**
      * Checks if the game is over.
